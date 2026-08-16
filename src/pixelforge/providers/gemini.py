@@ -102,8 +102,18 @@ class Gemini(Provider):
                 "(Text models still work on the free tier, which is why the key "
                 "itself tests fine.)" % self.model
             )
+        if code == 429 and ("prepay" in message.lower() or "credits" in message.lower()):
+            return (
+                "%s: billing is enabled but the prepaid balance is zero.\n"
+                "This is a different state from having no quota at all -- the "
+                "account is set up, it just has nothing left to spend.\n"
+                "Top up at https://ai.studio/projects, then retry. Every model "
+                "will fail until you do, so there is no cheaper one to fall back "
+                "to." % self.model
+            )
         if code == 429:
-            return "%s: rate limited. %s" % (self.model, message[:300])
+            return ("%s: rate limited -- this one is worth retrying shortly.\n%s"
+                    % (self.model, message[:300]))
         if code == 404:
             return (
                 "%s: no such model, or it is closed to new users.\n"
