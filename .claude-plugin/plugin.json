@@ -1,0 +1,9 @@
+{
+  "name": "pixelforge",
+  "version": "0.1.0",
+  "description": "Palette-locked pixel art tooling: lint, clean, preview and generate against a fixed palette and fixed canvases.",
+  "author": { "name": "amramos" },
+  "homepage": "https://github.com/amramos/pixelforge",
+  "license": "MIT",
+  "keywords": ["pixel-art", "palette", "gamedev", "aseprite"]
+}

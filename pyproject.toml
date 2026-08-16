@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pixelforge"
+version = "0.1.0"
+description = "Palette-locked pixel art tooling: lint, clean, preview, and generate against a fixed palette and fixed canvases."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "amramos" }]
+keywords = ["pixel-art", "palette", "gamedev", "aseprite", "quantization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Graphics",
+]
+
+# Pillow is the only runtime dependency. The Gemini provider deliberately uses
+# urllib from the standard library rather than requests: one dependency is a
+# smaller thing to keep working than two.
+dependencies = ["Pillow>=10.0"]
+
+[project.urls]
+Homepage = "https://github.com/amramos/pixelforge"
+Issues = "https://github.com/amramos/pixelforge/issues"
+
+[project.scripts]
+pixelforge = "pixelforge.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pixelforge"]
