@@ -84,7 +84,7 @@ ai_origin_value = "ai-generated"
 
 [generate]
 provider = "gemini"
-model = "gemini-2.5-flash-image"
+model = "gemini-3-pro-image"
 staging = ".pixelforge/staging"
 render_scale = 16
 background = "#ff00ff"
@@ -135,14 +135,40 @@ Generated files land in the staging directory and **never in your asset tree**.
 Promotion is deliberate, so an `origin = ai-generated` provenance row gets
 written by a human who meant it.
 
-> The Gemini provider is **written but not verified against a live key** — there
-> was no API access when it was built. The endpoint and model id are both
-> configurable; if a call fails, change `[generate] model` before changing code.
+### Gemini image models are paid-only
+
+Verified against a live key: the endpoint, auth header and request shape are all
+correct, and text models answer on the free tier. **Every image model returns
+HTTP 429 with `limit: 0` until billing is enabled** on the key's project — it is
+a quota of zero, not a rate limit, so retrying never helps. Enable billing at
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+`pixelforge` says exactly that rather than echoing the API's JSON, because the
+raw error reads like a bug in the client.
+
+**Enabling billing removes the project's free tier.** Measured on one key: text
+models answered fine on the free tier while image models reported `limit: 0`;
+after switching the project to prepaid billing, *every* model — text included —
+returned `Your prepayment credits are depleted` until the balance was topped up.
+So enabling billing without funding it leaves you with less access than you
+started with. Those two 429s mean opposite things and `pixelforge` reports them
+separately for that reason.
+
+To see what a key can actually reach:
+
+```bash
+curl -H "x-goog-api-key: $GEMINI_API_KEY" https://generativelanguage.googleapis.com/v1beta/models
+```
+
+Then set `[generate] model`, or pass `--model` for one call. Model ids move
+between generations; the default is a starting point, not a promise.
 
 ## Status
 
-Alpha. The palette, quantize, resample, alpha, lint and clean layers are tested.
-The provider layer is not.
+Alpha. The palette, quantize, resample, alpha, lint and clean layers are tested
+and have been run against real assets. The provider's request path is verified
+against a live key; **a successful image response has never been observed**,
+because image generation needs billing.
 
 ## License
 

@@ -272,6 +272,57 @@ class TestCleanOrdering(TempCase):
         self.assertGreater(sum(1 for p in read(result.image) if p[3]), 0)
 
 
+class TestColourBudget(TempCase):
+    def _spread(self):
+        """Five palette colours, RED dominant and WHITE used once."""
+        image = Image.new("RGBA", (4, 4))
+        image.putdata([(*RED, 255)] * 8 + [(*GREEN, 255)] * 4 + [(*BLUE, 255)] * 2
+                      + [(0, 0, 0, 255), (255, 255, 255, 255)])
+        return image
+
+    def test_reduces_to_the_budget(self):
+        out, dropped = clean_module.reduce_to_budget(self._spread(), self.palette, 3)
+        self.assertEqual(dropped, 2)
+        self.assertEqual(len(quantize.unique_colors(out)), 3)
+
+    def test_keeps_the_busiest_colours(self):
+        out, _ = clean_module.reduce_to_budget(self._spread(), self.palette, 3)
+        kept = set(quantize.unique_colors(out))
+        self.assertEqual(kept, {RED, GREEN, BLUE})
+
+    def test_result_stays_inside_the_palette(self):
+        out, _ = clean_module.reduce_to_budget(self._spread(), self.palette, 2)
+        for rgb in quantize.unique_colors(out):
+            self.assertIn(rgb, self.palette)
+
+    def test_under_budget_is_left_alone(self):
+        image = self._spread()
+        out, dropped = clean_module.reduce_to_budget(image, self.palette, 16)
+        self.assertEqual(dropped, 0)
+        self.assertEqual(read(out), read(image))
+
+    def test_alpha_survives_reduction(self):
+        image = Image.new("RGBA", (2, 2))
+        image.putdata([(*RED, 255), (*GREEN, 255), (*BLUE, 255), (0, 0, 0, 0)])
+        out, _ = clean_module.reduce_to_budget(image, self.palette, 2)
+        self.assertEqual(out.getpixel((1, 1))[3], 0)
+
+    def test_clean_enforces_a_canvas_budget_end_to_end(self):
+        write(self.root, "pixelforge.toml", """
+            [palette]
+            source = "palette.gpl"
+
+            [[canvas]]
+            name = "tiny"
+            size = [4, 4]
+            paths = ["art/*.png"]
+            max_colors = 2
+        """)
+        config = Config.load(self.root / "pixelforge.toml")
+        result = clean_module.clean_for(config, self._spread(), config.canvas_named("tiny"))
+        self.assertLessEqual(len(quantize.unique_colors(result.image)), 2)
+
+
 class TestConfig(TempCase):
     def _config(self, extra: str = "") -> Config:
         write(self.root, "pixelforge.toml", """

@@ -52,7 +52,7 @@ anchor = "bottom"
 
 [generate]
 provider = "gemini"
-model = "gemini-2.5-flash-image"
+model = "gemini-3-pro-image"      # `--model` overrides per call
 staging = ".pixelforge/staging"
 render_scale = 16
 background = "#ff00ff"
@@ -103,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     make.add_argument("--style", default="")
     make.add_argument("--count", type=int, default=1)
     make.add_argument("--reference", type=Path, help="image to steer composition")
+    make.add_argument("--model", help="override [generate] model for this call")
     make.add_argument("--api-key")
     make.add_argument("--raw", action="store_true", help="also keep the untouched response")
 
@@ -219,10 +220,11 @@ def _sheet(args: argparse.Namespace) -> int:
 def _gen(config: Config, args: argparse.Namespace) -> int:
     canvas = config.canvas_named(args.canvas)
     text = prompt_module.build(config, canvas, args.subject, args.style)
+    model = args.model or config.generation.model
     provider = providers.get(config.generation.provider)(
-        model=config.generation.model, api_key=args.api_key)
+        model=model, api_key=args.api_key)
 
-    print("%s | %s" % (config.generation.model, prompt_module.describe(config, canvas)))
+    print("%s | %s" % (model, prompt_module.describe(config, canvas)))
     result = provider.generate(text, args.reference, args.count)
     print("received %d image(s)" % len(result))
 
