@@ -23,29 +23,31 @@ STARTER = '''# pixelforge -- https://github.com/amramos/pixelforge
 # actually loads, then declare one [[canvas]] per class of asset.
 
 [palette]
-source = "assets/art/palette.gpl"    # .gpl, .hex, .txt, .act, or a PNG strip
+source = "art/palette.gpl"           # .gpl, .hex, .txt, .act, or a PNG strip
 metric = "redmean"                   # or "rgb"
 
-# Colours that may only appear in some places. Optional.
+# Colours that may only appear in some places -- a danger red, a colour that
+# belongs to one story item. Snapping will not reach them elsewhere. Optional.
 # [[palette.reserved]]
-# name = "SIGNAL"
-# colors = ["#c23a2b", "#4fa84a"]
-# allow_in = ["assets/art/ui/**"]
+# name = "alert"
+# colors = ["#d94b3a", "#5cb85c"]
+# allow_in = ["art/ui/**"]
 
 [[canvas]]
 name = "sprite"
 size = [32, 32]
-paths = ["assets/art/sprites/**/*.png"]
+paths = ["art/sprites/**/*.png"]
+# exclude = ["art/sprites/_wip/**"]
 max_colors = 16
 hard_alpha = true
 anchor = "bottom"
 
 # [naming]
 # pattern = '^[a-z]+_[a-z0-9]+_\\d{2}\\.png$'
-# exempt = ["assets/art/_sources/**"]
+# exempt = ["art/_sources/**"]
 
 # [provenance]
-# manifest = "assets/PROVENANCE.csv"
+# manifest = "art/PROVENANCE.csv"
 # ai_origin_value = "ai-generated"
 
 [generate]

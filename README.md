@@ -42,35 +42,44 @@ onto the nearest red in your palette and becomes part of the art.
 
 ```toml
 [palette]
-source = "assets/art/skeleton-crew-34.gpl"   # .gpl, .hex, .txt, .act, or a PNG strip
-metric = "redmean"                           # perceptual-ish; or "rgb"
+source = "art/palette.gpl"     # .gpl, .hex, .txt, .act, or a PNG strip
+metric = "redmean"             # perceptual-ish; or "rgb"
 
+# A ramp that may only appear in some places. Snapping will not reach these
+# colours outside `allow_in`, and neither will a generation prompt.
 [[palette.reserved]]
-name = "SIGNAL"
-colors = ["#c23a2b", "#4fa84a"]
-allow_in = ["assets/art/ui/**"]
+name = "alert"
+colors = ["#d94b3a", "#5cb85c"]
+allow_in = ["art/ui/**"]
 
 [[canvas]]
-name = "crew_portrait"
+name = "portrait"
 size = [48, 64]
-paths = ["assets/art/crew/portrait/**/*.png"]
+paths = ["art/characters/portrait/**/*.png"]
+exclude = ["art/characters/portrait/_wip/**"]
 max_colors = 16
 hard_alpha = true
 
 [[canvas]]
-name = "crew_sprite"
-size = [128, 32]
+name = "walk_cycle"
+size = [128, 32]               # four 32x32 frames, left to right
 frames = 4
-paths = ["assets/art/crew/sprite/**/*.png"]
+paths = ["art/characters/sprite/**/*.png"]
 max_colors = 16
-anchor = "bottom"
+anchor = "bottom"              # so the figure sits on a baseline, not centred
+
+[[canvas]]
+name = "tile"
+size = [16, 16]
+paths = ["art/tiles/*.png"]
+max_colors = 8
 
 [naming]
 pattern = '^[a-z]+_[a-z0-9]+_\d{2}\.png$'
-exempt = ["assets/art/_sources/**"]
+exempt = ["art/_sources/**"]
 
 [provenance]
-manifest = "assets/PROVENANCE.csv"
+manifest = "art/PROVENANCE.csv"
 ai_origin_value = "ai-generated"
 
 [generate]
