@@ -325,8 +325,8 @@ class TestConfig(TempCase):
         """)
         ramp = config.reserved[0]
         self.assertTrue(ramp.permits("art/ui/panel.png"))
-        self.assertFalse(ramp.permits("art/crew/head.png"))
-        self.assertEqual(clean_module.forbidden_colors(config, "art/crew/head.png"),
+        self.assertFalse(ramp.permits("art/sprites/hero_idle_01.png"))
+        self.assertEqual(clean_module.forbidden_colors(config, "art/sprites/hero_idle_01.png"),
                          {(255, 255, 255)})
         self.assertEqual(clean_module.forbidden_colors(config, "art/ui/panel.png"), set())
 
@@ -389,6 +389,55 @@ class TestLint(TempCase):
     def test_missing_art_warns_and_never_errors(self):
         report = lint.lint(self.config, self.canvas, [])
         self.assertTrue(report.ok)
+
+
+class TestDocumentedExamples(TempCase):
+    """The README block and the `init` template must actually load.
+
+    Both are configuration a user copies verbatim, so a drift between them and
+    the loader is a broken first five minutes. Extracting them from the real
+    sources rather than restating them here is the point.
+    """
+
+    def _load(self, toml_text: str) -> Config:
+        write(self.root, "pixelforge.toml", toml_text)
+        # Every example points its palette somewhere; put a real one there.
+        source = [line for line in toml_text.splitlines()
+                  if line.strip().startswith("source =")][0]
+        relative = source.split("=", 1)[1].split("#")[0].strip().strip('"')
+        write(self.root, relative, GPL)
+        return Config.load(self.root / "pixelforge.toml")
+
+    def test_readme_example_loads(self):
+        readme = Path(__file__).resolve().parent.parent / "README.md"
+        if not readme.exists():
+            self.skipTest("README.md is not present in an installed package")
+        blocks = readme.read_text(encoding="utf-8").split("```toml")
+        self.assertGreater(len(blocks), 1, "README has no toml example to check")
+        config = self._load(blocks[1].split("```")[0])
+        names = [canvas.name for canvas in config.canvases]
+        self.assertEqual(names, ["portrait", "walk_cycle", "tile"])
+        self.assertEqual(config.canvas_named("walk_cycle").frame_size, (32, 32))
+        self.assertEqual(config.canvas_named("walk_cycle").anchor, "bottom")
+        self.assertTrue(config.reserved[0].permits("art/ui/panel.png"))
+        self.assertFalse(config.reserved[0].permits("art/tiles/grass_plain_01.png"))
+
+    def test_init_template_loads(self):
+        from pixelforge.cli import STARTER
+
+        config = self._load(STARTER)
+        self.assertEqual([canvas.name for canvas in config.canvases], ["sprite"])
+        self.assertEqual(config.canvas_named("sprite").size, (32, 32))
+
+    def test_examples_name_no_particular_project(self):
+        """Guards against a real project's folder tree leaking into the docs."""
+        from pixelforge.cli import STARTER
+
+        readme = Path(__file__).resolve().parent.parent / "README.md"
+        text = STARTER + (readme.read_text(encoding="utf-8") if readme.exists() else "")
+        for token in ("skeleton", "crew_portrait", "crew_sprite"):
+            self.assertNotIn(token, text.lower(),
+                             "%r looks like it came from one specific project" % token)
 
 
 class TestPrompt(TempCase):
