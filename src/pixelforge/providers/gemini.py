@@ -27,7 +27,7 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 class Gemini(Provider):
     api_key_env = "GEMINI_API_KEY"
 
-    def __init__(self, model: str = "gemini-2.5-flash-image",
+    def __init__(self, model: str = "gemini-3-pro-image",
                  api_key: str | None = None, timeout: int = 120,
                  base_url: str = BASE_URL) -> None:
         super().__init__(model, api_key or os.environ.get(self.api_key_env), timeout)
@@ -75,14 +75,48 @@ class Gemini(Provider):
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as failure:
-            detail = failure.read().decode("utf-8", "replace")[:800]
-            raise GenerationError(
-                "%s returned HTTP %d\n%s" % (self.model, failure.code, detail)
-            ) from failure
+            detail = failure.read().decode("utf-8", "replace")
+            raise GenerationError(self._explain(failure.code, detail)) from failure
         except urllib.error.URLError as failure:
             raise GenerationError("could not reach %s: %s" % (url, failure.reason)) from failure
         except json.JSONDecodeError as failure:
             raise GenerationError("%s returned a non-JSON body" % self.model) from failure
+
+    def _explain(self, code: int, detail: str) -> str:
+        """Turn the API's wall of JSON into the one sentence that helps.
+
+        Both of these were met on the first real run against a live key, and both
+        look like a bug in this file until you read far enough into the payload.
+        """
+        try:
+            message = json.loads(detail).get("error", {}).get("message", "")
+        except json.JSONDecodeError:
+            message = detail[:400]
+
+        if code == 429 and "limit: 0" in message:
+            return (
+                "%s: this key has no image quota.\n"
+                "Gemini image models are paid-only -- the free tier limit is 0, so "
+                "no amount of waiting will help.\nEnable billing for the key's "
+                "project at https://aistudio.google.com/apikey, then retry.\n"
+                "(Text models still work on the free tier, which is why the key "
+                "itself tests fine.)" % self.model
+            )
+        if code == 429:
+            return "%s: rate limited. %s" % (self.model, message[:300])
+        if code == 404:
+            return (
+                "%s: no such model, or it is closed to new users.\n"
+                "List what this key can reach:\n"
+                "  curl -H 'x-goog-api-key: $GEMINI_API_KEY' "
+                "https://generativelanguage.googleapis.com/v1beta/models\n"
+                "Then set [generate] model in pixelforge.toml, or pass --model."
+                % self.model
+            )
+        if code in (401, 403):
+            return ("%s: HTTP %d -- the key was rejected. Check %s is set to a "
+                    "current key. %s" % (self.model, code, self.api_key_env, message[:200]))
+        return "%s returned HTTP %d\n%s" % (self.model, code, message[:600])
 
     def _read(self, payload: dict) -> ProviderResult:
         if "error" in payload:

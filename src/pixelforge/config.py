@@ -70,7 +70,7 @@ class Canvas:
 @dataclass
 class Generation:
     provider: str = "gemini"
-    model: str = "gemini-2.5-flash-image"
+    model: str = "gemini-3-pro-image"
     staging: str = ".pixelforge/staging"
     render_scale: int = 16
     background: str = "#ff00ff"
@@ -216,7 +216,7 @@ class Config:
             ),
             generation=Generation(
                 provider=str(generate_table.get("provider", "gemini")),
-                model=str(generate_table.get("model", "gemini-2.5-flash-image")),
+                model=str(generate_table.get("model", "gemini-3-pro-image")),
                 staging=str(generate_table.get("staging", ".pixelforge/staging")),
                 render_scale=int(generate_table.get("render_scale", 16)),
                 background=str(generate_table.get("background", "#ff00ff")),
