@@ -22,7 +22,30 @@ from PIL import Image
 from . import alpha as alpha_module
 from . import quantize, resample
 from .config import Canvas, Config
-from .palette import RGB, Palette, to_hex
+from .palette import RGB, Palette, Swatch, to_hex
+
+
+def reduce_to_budget(image: Image.Image, palette: Palette,
+                     max_colors: int) -> tuple[Image.Image, int]:
+    """Drop the least-used colours until the image fits its budget.
+
+    Run AFTER downscaling, never before: the downscale decides which colours
+    actually survive and in what proportion, and a colour that dominates the
+    source can end up as four pixels in the result.
+
+    The keepers are chosen by pixel count and the losers are remapped to the
+    nearest *kept* colour, so the result stays inside the palette and the busiest
+    areas keep their exact colour. A sixteen-colour limit is what produces the
+    look -- FFT used sixteen per sprite -- so this is a style rule, not a saving.
+    """
+    counts = quantize.unique_colors(image)
+    if len(counts) <= max_colors:
+        return image, 0
+    keep = [rgb for rgb, _ in counts.most_common(max_colors)]
+    kept = Palette([Swatch(palette.name_of(rgb) or to_hex(rgb), rgb) for rgb in keep],
+                   palette.source, palette.metric)
+    mapping = {rgb: kept.nearest(rgb).rgb for rgb in counts}
+    return quantize.snap(image, kept, mapping), len(counts) - max_colors
 
 
 @dataclass
@@ -43,6 +66,7 @@ def clean(image: Image.Image, palette: Palette,
           tolerance: int = 24,
           threshold: int = 128,
           trim: bool = True,
+          max_colors: int | None = None,
           explain: bool = True) -> CleanResult:
     """Take an arbitrary image to a palette-locked, hard-alpha, exact-canvas one."""
     result = CleanResult(image.convert("RGBA"))
@@ -99,6 +123,13 @@ def clean(image: Image.Image, palette: Palette,
             result.steps.append("fitted onto the %dx%d canvas, anchored %s"
                                 % (size[0], size[1], anchor))
 
+    # 4. the colour budget, last -- the downscale decides which colours survive
+    if max_colors is not None:
+        result.image, dropped = reduce_to_budget(result.image, palette, max_colors)
+        if dropped:
+            result.steps.append("dropped the %d least-used colour(s) to meet the "
+                                "%d-colour budget" % (dropped, max_colors))
+
     return result
 
 
@@ -125,7 +156,8 @@ def clean_for(config: Config, image: Image.Image, canvas: Canvas,
     blocked = forbidden_colors(config, relative if relative is not None else "")
     if blocked:
         palette = palette.without(blocked)
-    options = {"size": canvas.size, "anchor": canvas.anchor}
+    options = {"size": canvas.size, "anchor": canvas.anchor,
+               "max_colors": canvas.max_colors}
     options.update(overrides)
     result = clean(image, palette, **options)
     if blocked:
