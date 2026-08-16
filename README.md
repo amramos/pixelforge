@@ -146,6 +146,14 @@ a quota of zero, not a rate limit, so retrying never helps. Enable billing at
 `pixelforge` says exactly that rather than echoing the API's JSON, because the
 raw error reads like a bug in the client.
 
+**Enabling billing removes the project's free tier.** Measured on one key: text
+models answered fine on the free tier while image models reported `limit: 0`;
+after switching the project to prepaid billing, *every* model — text included —
+returned `Your prepayment credits are depleted` until the balance was topped up.
+So enabling billing without funding it leaves you with less access than you
+started with. Those two 429s mean opposite things and `pixelforge` reports them
+separately for that reason.
+
 To see what a key can actually reach:
 
 ```bash
