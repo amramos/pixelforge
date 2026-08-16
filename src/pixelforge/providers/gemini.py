@@ -102,6 +102,14 @@ class Gemini(Provider):
                 "(Text models still work on the free tier, which is why the key "
                 "itself tests fine.)" % self.model
             )
+        if code == 429 and "spend" in message.lower():
+            return (
+                "%s: the project's spending cap is reached, not its balance.\n"
+                "Credits may be sitting there unused -- the cap is a separate "
+                "limit and defaults low.\nRaise it at https://ai.studio/spend, "
+                "then retry. Waiting does not help; the cap is monthly."
+                % self.model
+            )
         if code == 429 and ("prepay" in message.lower() or "credits" in message.lower()):
             return (
                 "%s: billing is enabled but the prepaid balance is zero.\n"
